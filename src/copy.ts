@@ -146,12 +146,4 @@ export const copy = {
     budget: (used: number, cap: number) => `${used} din ${cap} emailuri de test folosite luna asta`,
     liveTitle: 'Jurnal în direct',
   },
-  placeholder: {
-    home: 'Acasă',
-    booking: 'Programare',
-    status: 'Stare programare',
-    automations: 'Automatizări',
-    privacy: 'Confidențialitate',
-    admin: 'Administrare',
-  },
 } as const;
