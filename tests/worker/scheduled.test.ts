@@ -2,7 +2,8 @@ import { createExecutionContext, createScheduledController, waitOnExecutionConte
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { listRuns } from '../../worker/db';
-import worker, { handleScheduled } from '../../worker/index';
+import worker from '../../worker/index';
+import { handleScheduled } from '../../worker/scheduled';
 import { cleanup } from '../../worker/jobs';
 import { testDeps } from './helpers';
 
