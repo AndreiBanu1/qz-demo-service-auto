@@ -22,6 +22,7 @@ export function withHeaders(res: Response): Response {
   out.headers.set('X-Robots-Tag', 'noindex, nofollow');
   out.headers.set('Referrer-Policy', 'no-referrer');
   out.headers.set('X-Content-Type-Options', 'nosniff');
+  out.headers.set('Cache-Control', 'no-store');
   return out;
 }
 

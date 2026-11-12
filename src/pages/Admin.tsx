@@ -61,9 +61,8 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   );
 
   const refreshLive = useCallback(
-    () =>
-      Promise.all([api.getLog().then(setRuns), api.getOutbox().then(setOutbox)]).catch(fail),
-    [fail],
+    () => Promise.all([api.getLog().then(setRuns), api.getOutbox().then(setOutbox)]),
+    [],
   );
   const refreshAll = useCallback(
     () => Promise.all([api.listAppointments().then(setAppointments), refreshLive()]).catch(fail),
@@ -77,7 +76,12 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   // Poll the log while the page is visible; catch up as soon as it becomes visible again.
   useEffect(() => {
     const tick = () => {
-      if (document.visibilityState === 'visible') void refreshLive();
+      if (document.visibilityState !== 'visible') return;
+      // A dropped poll must not leave an error on screen; the next one recovers.
+      // Only an expired session matters.
+      refreshLive().catch((err) => {
+        if (err instanceof ApiError && err.status === 401) onLoggedOut();
+      });
     };
     const id = window.setInterval(tick, POLL_MS);
     document.addEventListener('visibilitychange', tick);
@@ -85,7 +89,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', tick);
     };
-  }, [refreshLive]);
+  }, [refreshLive, onLoggedOut]);
 
   async function guarded(action: () => Promise<unknown>) {
     setError('');

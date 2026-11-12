@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Admin } from '../../src/pages/Admin';
 
 const appointment = {
@@ -103,5 +103,88 @@ describe('Admin', () => {
     mockApi();
     renderAdmin();
     expect(await screen.findByText('3 din 40 emailuri de test folosite luna asta')).toBeInTheDocument();
+  });
+});
+
+describe('Admin polling', () => {
+  const logCalls = (fn: ReturnType<typeof mockApi>) => calls(fn, 'GET', '/api/log').length;
+  const setVisibility = (v: 'visible' | 'hidden') =>
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(v);
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const tick = async (ms: number) => {
+    await act(async () => {
+      vi.advanceTimersByTime(ms);
+    });
+  };
+
+  it('polls the log every 3000 ms while visible', async () => {
+    const fn = mockApi();
+    renderAdmin();
+    await screen.findByRole('button', { name: 'Rulează acum' });
+    const before = logCalls(fn);
+    await tick(3000);
+    expect(logCalls(fn)).toBe(before + 1);
+    await tick(3000);
+    expect(logCalls(fn)).toBe(before + 2);
+  });
+
+  it('does not poll while the page is hidden and catches up when visible again', async () => {
+    const fn = mockApi();
+    renderAdmin();
+    await screen.findByRole('button', { name: 'Rulează acum' });
+    const vis = setVisibility('hidden');
+    const before = logCalls(fn);
+    await tick(9000);
+    expect(logCalls(fn)).toBe(before);
+    vis.mockReturnValue('visible');
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(logCalls(fn)).toBe(before + 1);
+  });
+
+  it('stops polling after unmount', async () => {
+    const fn = mockApi();
+    const { unmount } = renderAdmin();
+    await screen.findByRole('button', { name: 'Rulează acum' });
+    unmount();
+    const before = logCalls(fn);
+    await tick(9000);
+    expect(logCalls(fn)).toBe(before);
+  });
+
+  it('a failed poll shows no error once the next poll succeeds', async () => {
+    let failNext = false;
+    mockApi((url) => (url === '/api/log' && failNext ? json({ error: 'Ceva n-a mers. Încearcă din nou.' }, 500) : undefined));
+    renderAdmin();
+    await screen.findByRole('button', { name: 'Rulează acum' });
+    failNext = true;
+    await tick(3000);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    failNext = false;
+    await tick(3000);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('a 401 during polling returns to the login form', async () => {
+    let expired = false;
+    mockApi((url) => {
+      if (url === '/api/log' && expired) return json({ error: 'Intră în cont ca administrator.' }, 401);
+      if (url === '/api/session' && expired) return json({ admin: false });
+      return undefined;
+    });
+    renderAdmin();
+    await screen.findByRole('button', { name: 'Rulează acum' });
+    expired = true;
+    await tick(3000);
+    expect(await screen.findByLabelText('Parola')).toBeInTheDocument();
   });
 });

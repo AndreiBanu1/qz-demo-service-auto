@@ -226,5 +226,6 @@ describe('headers', () => {
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('referrer-policy')).toBeTruthy();
+    expect(res.headers.get('cache-control')).toBe('no-store');
   });
 });

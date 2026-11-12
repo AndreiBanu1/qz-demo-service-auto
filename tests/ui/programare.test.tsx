@@ -26,3 +26,23 @@ describe('Programare', () => {
     expect(posts).toHaveLength(0);
   });
 });
+
+describe('Programare email check', () => {
+  it('rejects a non-test email with the demo message and makes no POST', async () => {
+    const fetchMock = vi.fn(async (..._args: unknown[]) => new Response(JSON.stringify({ admin: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <MemoryRouter>
+        <Programare />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('Prenume'), { target: { value: 'Ion' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ion@gmail.com' } });
+    fireEvent.change(screen.getByLabelText('Marca'), { target: { value: 'Dacia' } });
+    fireEvent.change(screen.getByLabelText('Modelul'), { target: { value: 'Logan' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Trimite programarea' }));
+    const alerts = await screen.findAllByText('În demo folosește o adresă de test, de exemplu ion@turbo-garaj.test.');
+    expect(alerts.length).toBeGreaterThan(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

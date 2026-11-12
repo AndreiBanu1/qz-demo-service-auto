@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { WORK_LABELS } from '../../core/booking';
 import type { Work } from '../../core/types';
 import { todayInBucharest } from '../../core/dates';
+import { isTestAddress } from '../../core/recipients';
 import { createAppointment, getSession } from '../api';
 import { copy } from '../copy';
 import { btnPrimary, card, errorText, field, label } from '../ui';
@@ -27,8 +28,12 @@ export function Programare() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (busy) return;
-    setBusy(true);
     setOutcome(null);
+    if (!isTestAddress(email)) {
+      setOutcome({ kind: 'error', message: c.emailHint });
+      return;
+    }
+    setBusy(true);
     try {
       // Strangers never store anything: only an admin session may POST.
       const { admin } = await getSession();
