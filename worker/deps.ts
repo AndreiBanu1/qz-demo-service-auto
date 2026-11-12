@@ -36,7 +36,7 @@ function newToken(): string {
 function required(env: Env, name: 'ADMIN_PASSWORD' | 'SESSION_SECRET' | 'SITE_URL'): string {
   const value = env[name];
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(`${name} is not set (use .dev.vars locally, wrangler secret put in production)`);
+    throw new Error(`${name} is not set (use .dev.vars locally; in production set SITE_URL in wrangler.toml and secrets with wrangler secret put)`);
   }
   return value;
 }
@@ -58,6 +58,17 @@ export function createDeps(env: Env): Deps {
   const adminPassword = required(env, 'ADMIN_PASSWORD');
   const sessionSecret = required(env, 'SESSION_SECRET');
   const siteUrl = required(env, 'SITE_URL').replace(/\/+$/, '');
+  if (env.MAIL_MODE === 'memory') {
+    let host = '';
+    try {
+      host = new URL(siteUrl).hostname;
+    } catch {
+      // handled below
+    }
+    if (host !== '127.0.0.1' && host !== 'localhost') {
+      throw new Error(`MAIL_MODE is memory but SITE_URL (${siteUrl}) is not a local address`);
+    }
+  }
   return {
     db: env.DB,
     email: emailSender(env),

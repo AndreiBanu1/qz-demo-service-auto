@@ -14,8 +14,10 @@ database_id = "local-placeholder"   # replaced with the real id at Task 12
 migrations_dir = "migrations"
 
 [vars]
-MAIL_MODE = "memory"
-SITE_URL = "http://127.0.0.1:8787"
+# Production values. Local values live in .dev.vars (see .dev.vars.example) and override these.
+# SITE_URL is set at deploy to https://turbo-garaj-demo.<subdomain>.workers.dev
+MAIL_MODE = "sandbox"
+SITE_URL = ""
 
 [triggers]
 crons = ["0 5 * * *", "0 2 * * *"]

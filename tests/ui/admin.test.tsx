@@ -99,6 +99,12 @@ describe('Admin', () => {
     confirm.mockRestore();
   });
 
+  it('shows the preferred date in Romanian', async () => {
+    mockApi();
+    renderAdmin();
+    expect(await screen.findByText(/20 noiembrie 2026/)).toBeInTheDocument();
+  });
+
   it('shows the email budget', async () => {
     mockApi();
     renderAdmin();

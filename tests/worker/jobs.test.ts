@@ -162,7 +162,7 @@ describe('reminders', () => {
     deps.email.failNext('boom');
     const first = await runReminders(deps, 'cron');
     expect(first.result).toBe('eroare');
-    expect(first.items[0]).toMatchObject({ outcome: 'eroare', error: 'boom' });
+    expect(first.items[0]).toMatchObject({ outcome: 'eroare', error: 'Trimiterea emailului a eșuat.' });
     expect(deps.email.sent).toHaveLength(0);
 
     const second = await runReminders(deps, 'buton');
@@ -201,7 +201,7 @@ describe('budget', () => {
     const run = await runJob(deps, 'confirmare-programare', 'formular', async (ctx) => {
       await ctx.sendEmail('ion@turbo-garaj.test', msg);
     });
-    expect(run.items[0]).toMatchObject({ outcome: 'eroare', error: 'boom' });
+    expect(run.items[0]).toMatchObject({ outcome: 'eroare', error: 'Trimiterea emailului a eșuat.' });
     expect(await emailsUsed(deps.db, '2026-11')).toBe(0);
   });
 });
@@ -249,7 +249,7 @@ describe('cleanup and deletion', () => {
 
     const run = await cleanup(deps, 'cron', 'nightly');
 
-    expect(run).toMatchObject({ job: 'curatenie', trigger: 'cron', result: 'nimic-de-trimis' });
+    expect(run).toMatchObject({ job: 'curatenie', trigger: 'cron', result: 'ok' });
     expect(await getAppointment(deps.db, 'old')).toBeNull();
     expect(await getAppointment(deps.db, 'new')).not.toBeNull();
     expect((await listOutbox(deps.db, 50)).map((m) => m.id)).not.toContain('o-old');
@@ -303,7 +303,29 @@ describe('runJob', () => {
     const run = await runJob(deps, 'curatenie', 'buton', async () => {
       throw new Error('x');
     });
-    expect(run).toMatchObject({ result: 'eroare', error: 'x' });
+    expect(run).toMatchObject({
+      result: 'eroare',
+      error: 'Eroare la rulare. Detaliile sunt în jurnalul serverului.',
+    });
+    expect(JSON.stringify(run)).not.toContain('"x"');
     expect(await listRuns(deps.db, 50)).toEqual([run]);
+  });
+
+  it('a messaging job with nothing to send logs nimic-de-trimis, a non-messaging job logs ok', async () => {
+    const deps = testDeps();
+    const messaging = await runJob(deps, 'remindere-zilnice', 'buton', async () => {});
+    const silent = await runJob(deps, 'curatenie', 'buton', async () => {}, { sendsMessages: false });
+    expect(messaging.result).toBe('nimic-de-trimis');
+    expect(silent.result).toBe('ok');
+  });
+
+  it('sms rows store the test-phone label, not the customer email', async () => {
+    const deps = testDeps();
+    await runJob(deps, 'masina-gata', 'schimbare-status', async (ctx) => {
+      await ctx.sendSmsPreview('ion@turbo-garaj.test', { subject: 's', text: 't' });
+    });
+    const outbox = await listOutbox(deps.db, 50);
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0].to).toBe('telefon de test');
   });
 });

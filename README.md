@@ -2,7 +2,7 @@
 
 Turbo Garaj is a **fictional** Romanian car service. It is demo 4 by [Quality Zone](https://qualityzone.netlify.app/ro) and it exists to show automation that runs on its own: a booking is confirmed, a "your car is ready" link goes out, and reminders for ITP and oil changes are sent every morning. The log at `/automatizari` is the centrepiece.
 
-It is a Vite + React single-page app served by one Cloudflare Worker (static assets), with a D1 database and two Cron Triggers.
+It is a Vite + React single-page app served by one Cloudflare Worker (static assets and the /api routes), with a D1 database and two Cron Triggers.
 
 ## Demo rules
 
@@ -20,10 +20,10 @@ It is a Vite + React single-page app served by one Cloudflare Worker (static ass
 npm i
 cp .dev.vars.example .dev.vars          # placeholders; edit if you like
 npx wrangler d1 migrations apply turbo-garaj-demo --local
-npm run build && npx wrangler dev --test-scheduled
+npm run build && npx wrangler dev --ip 127.0.0.1 --port 8787 --test-scheduled
 ```
 
-The site is then at `http://127.0.0.1:8787`. Locally `MAIL_MODE=memory`, so no email leaves the machine.
+The site is then at `http://127.0.0.1:8787`. Locally `.dev.vars` sets `MAIL_MODE=memory` and `SITE_URL=http://127.0.0.1:8787` (overriding `wrangler.toml`, which holds the production values), so no email leaves the machine. The Worker refuses to start with `MAIL_MODE=memory` unless `SITE_URL` is local.
 
 Fire a cron by hand (needs `--test-scheduled`):
 
@@ -41,7 +41,7 @@ Open `/automatizari` to see the runs.
 
 ## Secrets and variables
 
-Secrets (`wrangler secret put NAME` in production, `.dev.vars` locally; never commit real values):
+Secrets (`npx wrangler secret put NAME` in production, `.dev.vars` locally; never commit real values):
 
 | Name | Purpose |
 | --- | --- |
@@ -54,8 +54,8 @@ Variables (`[vars]` in `wrangler.toml`):
 
 | Name | Purpose |
 | --- | --- |
-| `MAIL_MODE` | `sandbox` (Mailtrap) or `memory` (kept in memory, for dev and tests) |
-| `SITE_URL` | Public address, used in links inside messages |
+| `MAIL_MODE` | `sandbox` (Mailtrap; the production value) or `memory` (kept in memory; local only, set in `.dev.vars`) |
+| `SITE_URL` | Public address, used in links inside messages; empty in `wrangler.toml` until deploy, `http://127.0.0.1:8787` locally |
 
 ## Limits
 
@@ -86,10 +86,10 @@ Nothing has been deployed. The user does the account steps and types the secret 
 - [ ] Check the ONRC registry for "Turbo Garaj"; rename if a firm uses it.
 - [ ] Create a free Mailtrap account and sandbox; note the API token and inbox id.
 - [ ] Confirm the Cloudflare account (shared with Bucla Verde) and its `workers.dev` subdomain, and that the free Cron Trigger limit covers 2 + 1 crons. Explicit yes before anything below.
-- [ ] `wrangler d1 create turbo-garaj-demo`; put the id in `wrangler.toml`.
-- [ ] `wrangler d1 migrations apply turbo-garaj-demo --remote`.
-- [ ] `wrangler secret put` for the four secrets above (strong `ADMIN_PASSWORD`, random `SESSION_SECRET` of 32+ bytes).
-- [ ] Set `[vars]` `MAIL_MODE = "sandbox"` and `SITE_URL = "https://turbo-garaj-demo.<subdomain>.workers.dev"`.
-- [ ] `npm run build && wrangler deploy`.
+- [ ] `npx wrangler d1 create turbo-garaj-demo`; put the id in `wrangler.toml`.
+- [ ] `npx wrangler d1 migrations apply turbo-garaj-demo --remote`.
+- [ ] `npx wrangler secret put` for the four secrets above (strong `ADMIN_PASSWORD`, random `SESSION_SECRET` of 32+ bytes).
+- [ ] In `wrangler.toml` `[vars]`, set `SITE_URL = "https://turbo-garaj-demo.<subdomain>.workers.dev"` once the subdomain is confirmed (`MAIL_MODE` is already `sandbox`).
+- [ ] `npm run build && npx wrangler deploy`.
 - [ ] Smoke test: `curl -sI https://turbo-garaj-demo.<subdomain>.workers.dev/ | grep -i x-robots-tag` prints `noindex, nofollow`; in `/admin` press "Resetează demo", make a booking, see the email in Mailtrap and both runs in `/automatizari`.
 - [ ] Next morning: `/automatizari` shows a `curatenie` run after 02:00 UTC and a `remindere-zilnice` run ("pornit automat") after 05:00 UTC, with one email sent.

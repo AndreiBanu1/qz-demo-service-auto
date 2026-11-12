@@ -8,6 +8,7 @@ import {
   reminderSms,
   serviceNotification,
 } from '../../core/messages';
+import { formatDateRo } from '../../core/format';
 import type { Appointment, Car, DueReminder } from '../../core/types';
 
 const appt: Appointment = {
@@ -46,11 +47,27 @@ const URL = 'https://turbo-garaj-demo.example.workers.dev/status/abc';
 describe('messages', () => {
   it('subjects match the copy', () => {
     expect(bookingConfirmation(appt, URL).subject).toBe('Programarea ta la Turbo Garaj a fost primită');
-    expect(serviceNotification(appt).subject).toBe('Programare nouă: Dacia Logan, 2026-11-12');
+    expect(serviceNotification(appt).subject).toBe('Programare nouă: Dacia Logan, 12 noiembrie 2026');
     expect(carReady(appt, URL).subject).toBe('Mașina ta e gata');
     expect(reminderEmail(car, due('itp', 7)).subject).toBe('Reminder: ITP-ul expiră în 7 zile');
     expect(reminderEmail(car, due('itp', 0)).subject).toBe('Reminder: ITP-ul expiră azi');
     expect(reminderEmail(car, due('ulei', 14)).subject).toBe('Reminder: e timpul pentru schimbul de ulei');
+  });
+  it('formats dates in Romanian', () => {
+    expect(formatDateRo('2026-11-12')).toBe('12 noiembrie 2026');
+    expect(formatDateRo('2027-01-05')).toBe('5 ianuarie 2027');
+    expect(bookingConfirmation(appt, URL).text).toContain('pe 12 noiembrie 2026.');
+    expect(serviceNotification(appt).text).toContain('Data dorită: 12 noiembrie 2026');
+  });
+  it('uses correct Romanian day counts', () => {
+    const subject = (n: number) => reminderEmail(car, due('itp', n)).subject;
+    expect(subject(1)).toBe('Reminder: ITP-ul expiră într-o zi');
+    expect(subject(7)).toBe('Reminder: ITP-ul expiră în 7 zile');
+    expect(subject(19)).toBe('Reminder: ITP-ul expiră în 19 zile');
+    expect(subject(20)).toBe('Reminder: ITP-ul expiră în 20 de zile');
+    expect(subject(30)).toBe('Reminder: ITP-ul expiră în 30 de zile');
+    expect(reminderEmail(car, due('itp', 30)).text).toContain('expiră în 30 de zile.');
+    expect(reminderSms(car, due('itp', 1)).text).toContain('expiră într-o zi.');
   });
   it('status URL appears in the confirmation and ready messages', () => {
     expect(bookingConfirmation(appt, URL).text).toContain(URL);

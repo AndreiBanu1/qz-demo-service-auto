@@ -1,4 +1,5 @@
 import { STATUS_LABELS, WORK_LABELS } from './booking';
+import { daysPhrase, formatDateRo } from './format';
 import type { Appointment, Car, DueReminder } from './types';
 
 export type Message = { subject: string; text: string };
@@ -13,7 +14,7 @@ export function bookingConfirmation(a: Appointment, statusUrl: string): Message 
     subject: 'Programarea ta la Turbo Garaj a fost primită',
     text: body([
       `Salut, ${a.firstName}!`,
-      `Am primit programarea ta pentru ${a.car.make} ${a.car.model}: ${WORK_LABELS[a.work]}, pe ${a.preferredDate}.`,
+      `Am primit programarea ta pentru ${a.car.make} ${a.car.model}: ${WORK_LABELS[a.work]}, pe ${formatDateRo(a.preferredDate)}.`,
       `Poți urmări starea lucrării aici: ${statusUrl}`,
     ]),
   };
@@ -21,12 +22,12 @@ export function bookingConfirmation(a: Appointment, statusUrl: string): Message 
 
 export function serviceNotification(a: Appointment): Message {
   return {
-    subject: `Programare nouă: ${a.car.make} ${a.car.model}, ${a.preferredDate}`,
+    subject: `Programare nouă: ${a.car.make} ${a.car.model}, ${formatDateRo(a.preferredDate)}`,
     text: body([
       `Salut, echipă! Clientul ${a.firstName} (${a.email}) a făcut o programare.`,
       `Mașina: ${a.car.make} ${a.car.model}`,
       `Lucrarea: ${WORK_LABELS[a.work]}`,
-      `Data dorită: ${a.preferredDate}`,
+      `Data dorită: ${formatDateRo(a.preferredDate)}`,
       `Stare: ${STATUS_LABELS[a.status]}`,
     ]),
   };
@@ -52,9 +53,7 @@ export function carReadySms(a: Appointment, statusUrl: string): Message {
 
 function reminderSubject(r: DueReminder): string {
   if (r.type === 'itp') {
-    return r.daysLeft === 0
-      ? 'Reminder: ITP-ul expiră azi'
-      : `Reminder: ITP-ul expiră în ${r.daysLeft} zile`;
+    return `Reminder: ITP-ul expiră ${daysPhrase(r.daysLeft)}`;
   }
   return 'Reminder: e timpul pentru schimbul de ulei';
 }
@@ -62,9 +61,7 @@ function reminderSubject(r: DueReminder): string {
 function reminderLine(c: Car, r: DueReminder): string {
   const car = `${c.make} ${c.model}`;
   if (r.type === 'itp') {
-    return r.daysLeft === 0
-      ? `ITP-ul pentru ${car} expiră azi.`
-      : `ITP-ul pentru ${car} expiră în ${r.daysLeft} zile.`;
+    return `ITP-ul pentru ${car} expiră ${daysPhrase(r.daysLeft)}.`;
   }
   return `E timpul pentru schimbul de ulei la ${car}.`;
 }

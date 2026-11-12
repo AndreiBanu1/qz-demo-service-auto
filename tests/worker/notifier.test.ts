@@ -33,6 +33,22 @@ describe('Mailtrap sandbox', () => {
     const sender = createMailtrapSandbox({ token: 'tok', inboxId: '123', fetchFn });
     await expect(sender.send(email)).rejects.toThrow('500');
   });
+
+  it('turns a timeout into a short Romanian message', async () => {
+    const fetchFn = (async () => {
+      throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+    }) as unknown as typeof fetch;
+    const sender = createMailtrapSandbox({ token: 'tok', inboxId: '123', fetchFn });
+    await expect(sender.send(email)).rejects.toThrow('Serverul de email nu a răspuns la timp.');
+  });
+
+  it('turns other network failures into a short Romanian message', async () => {
+    const fetchFn = (async () => {
+      throw new TypeError('fetch failed');
+    }) as unknown as typeof fetch;
+    const sender = createMailtrapSandbox({ token: 'tok', inboxId: '123', fetchFn });
+    await expect(sender.send(email)).rejects.toThrow('Trimiterea emailului a eșuat.');
+  });
 });
 
 describe('memory email', () => {
@@ -73,6 +89,17 @@ describe('createDeps', () => {
     const missing = { ...base } as Partial<Env>;
     delete missing.SESSION_SECRET;
     expect(() => createDeps(missing as Env)).toThrow(/SESSION_SECRET/);
+  });
+
+  it('throws when SITE_URL is empty', () => {
+    expect(() => createDeps({ ...base, SITE_URL: '' })).toThrow(/SITE_URL/);
+  });
+
+  it('throws when MAIL_MODE is memory but SITE_URL is not local', () => {
+    expect(() => createDeps({ ...base, SITE_URL: 'https://turbo-garaj-demo.x.workers.dev' })).toThrow(
+      /MAIL_MODE is memory/,
+    );
+    expect(() => createDeps({ ...base, SITE_URL: 'http://localhost:8787' })).not.toThrow();
   });
 
   it('builds memory deps with 32-byte base64url tokens', () => {

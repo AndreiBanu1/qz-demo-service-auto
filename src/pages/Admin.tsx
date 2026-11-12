@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { STATUS_LABELS, WORK_LABELS } from '../../core/booking';
+import { formatDateRo } from '../../core/format';
 import type { Appointment, OutboxMessage, Run, Status } from '../../core/types';
 import { ApiError, api } from '../api';
 import { RunList } from '../components/RunList';
@@ -149,7 +150,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
               <div>
                 <p className="text-xl font-bold text-white">{a.firstName}</p>
                 <p className="text-neutral-200">
-                  {a.car.make} {a.car.model} · {WORK_LABELS[a.work]} · {a.preferredDate}
+                  {a.car.make} {a.car.model} · {WORK_LABELS[a.work]} · {formatDateRo(a.preferredDate)}
                 </p>
               </div>
               <select

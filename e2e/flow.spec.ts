@@ -54,6 +54,13 @@ test('full automation flow', async ({ page, browser }) => {
   await expect(reminderRuns).toHaveCount(1, { timeout: 5000 });
   await page.screenshot({ path: 'e2e/screenshots/admin.png', fullPage: true });
 
+  // The new run is also listed on the public /automatizari page.
+  await page.goto('/automatizari');
+  await expect(
+    page.locator('li').filter({ hasText: 'Remindere zilnice' }).filter({ hasText: 'buton' }).first(),
+  ).toBeVisible();
+  await page.goto('/admin');
+
   // 7. Deleting the customer invalidates the status link.
   await page.getByRole('button', { name: 'Șterge clientul' }).click();
   await expect(page.getByText('Nu există programări.')).toBeVisible();

@@ -112,12 +112,16 @@ export const copy = {
         text: 'Datele unui străin nu se salvează niciodată. Formularul de programare e demonstrativ: dacă nu ești administrator, nu trimite nimic către server.',
       },
       {
+        heading: 'De ce se păstrează',
+        text: 'Datele se păstrează ca să putem trimite confirmarea programării, linkul de stare și remindere.',
+      },
+      {
         heading: 'Cât timp se păstrează',
         text: 'Programările și mașinile create de administrator se șterg după 7 zile. Rulările din jurnal se păstrează 30 de zile și conțin doar adrese de email mascate.',
       },
       {
         heading: 'Cum se șterg datele',
-        text: '„Șterge clientul” scoate programarea, mașina și mesajele lor, iar prenumele din jurnal se golește. „Resetează demo” șterge tot și pregătește din nou datele de exemplu.',
+        text: '„Șterge clientul” scoate programarea, mașina și mesajele lor, iar adresa mascată din jurnal se șterge. „Resetează demo” șterge tot și pregătește din nou datele de exemplu.',
       },
       {
         heading: 'Unde ajung emailurile',

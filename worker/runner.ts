@@ -4,6 +4,7 @@ import { isTestAddress, maskEmail, normalizeEmail } from '../core/recipients';
 import type { Channel, Job, Outcome, Run, RunItem, Trigger } from '../core/types';
 import { insertOutbox, insertRun, releaseEmail, reserveEmail } from './db';
 import type { Deps } from './deps';
+import { EmailError, EMAIL_FAILED_MESSAGE } from './notifier';
 
 export type RunContext = {
   runId: string;
@@ -14,7 +15,7 @@ export type RunContext = {
 const NOT_TEST_ADDRESS = 'adresă care nu e de test';
 const SMS_RECIPIENT = 'telefon de test';
 
-const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+const RUN_ERROR = 'Eroare la rulare. Detaliile sunt în jurnalul serverului.';
 
 /** Runs `fn`, then writes one log entry (spec §7) and returns it. */
 export async function runJob(
@@ -22,7 +23,10 @@ export async function runJob(
   job: Job,
   trigger: Trigger,
   fn: (ctx: RunContext) => Promise<void>,
+  // Jobs that send no messages by design (cleanup) log `ok`, not `nimic-de-trimis`.
+  options: { sendsMessages?: boolean } = {},
 ): Promise<Run> {
+  const sendsMessages = options.sendsMessages ?? true;
   const { db } = deps;
   const runId = deps.newId();
   const started = deps.now();
@@ -78,7 +82,8 @@ export async function runJob(
         } catch (e) {
           await releaseEmail(db, month);
           outcome = 'eroare';
-          error = errorMessage(e);
+          console.error('Email send failed', e);
+          error = e instanceof EmailError ? e.message : EMAIL_FAILED_MESSAGE;
         }
       }
       await record('email', addr, masked, m, outcome, error, appointmentId);
@@ -87,7 +92,7 @@ export async function runJob(
 
     async sendSmsPreview(to, m, appointmentId) {
       // No network call: the preview is the outbox row.
-      await record('sms-simulat', to, SMS_RECIPIENT, m, 'simulat', undefined, appointmentId);
+      await record('sms-simulat', SMS_RECIPIENT, SMS_RECIPIENT, m, 'simulat', undefined, appointmentId);
       return 'simulat';
     },
   };
@@ -96,14 +101,15 @@ export async function runJob(
   try {
     await fn(ctx);
   } catch (e) {
-    error = errorMessage(e);
+    console.error(`Job ${job} failed`, e);
+    error = RUN_ERROR;
   }
 
   const finished = deps.now();
   const result: Run['result'] =
     error !== undefined || items.some((i) => i.outcome === 'eroare')
       ? 'eroare'
-      : items.length === 0
+      : items.length === 0 && sendsMessages
         ? 'nimic-de-trimis'
         : 'ok';
 

@@ -26,6 +26,8 @@ export default defineConfig({
             miniflare: { bindings: {
                 TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
                 // Test-only values so createDeps(env) works in the Worker entry tests.
+                MAIL_MODE: 'memory',
+                SITE_URL: 'http://127.0.0.1:8787',
                 ADMIN_PASSWORD: 'test-admin',
                 SESSION_SECRET: 'test-secret',
               }, },

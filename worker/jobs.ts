@@ -163,7 +163,7 @@ export async function cleanup(
       await wipeAll(deps.db);
     }
     await replaceSeed(deps.db, buildSeed(todayInBucharest(now), now.toISOString()));
-  });
+  }, { sendsMessages: false });
 }
 
 /** „Șterge clientul”. False for an unknown id. */
