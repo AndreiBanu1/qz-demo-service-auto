@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { appointmentFixture, testDeps, type TestDeps } from './helpers';
 import { insertAppointment, insertRun } from '../../worker/db';
 import { route } from '../../worker/router';
@@ -185,15 +185,20 @@ describe('public routes', () => {
 
   it('log is public and masked', async () => {
     const deps = testDeps();
-    await insertRun(
-      deps.db,
-      runFixture({ items: [{ channel: 'email', to: 'i***@turbo-garaj.test', subject: 's', outcome: 'trimis-sandbox' }] }),
-    );
+    const cookie = await adminCookie(deps);
+    const created = await call(deps, '/api/appointments', { method: 'POST', headers: { cookie }, json: goodBooking });
+    expect(created.status).toBe(201);
+
+    // No cookie: the log is public.
     const res = await call(deps, '/api/log');
     expect(res.status).toBe(200);
-    const runs = (await res.json()) as { items: { to: string }[] }[];
-    expect(runs).toHaveLength(1);
-    for (const r of runs) for (const i of r.items) expect(i.to).not.toContain('ion@');
+    const text = await res.text();
+    expect(text).not.toContain('ion@turbo-garaj.test');
+    expect(text).not.toContain('ion@');
+    const runs = JSON.parse(text) as { items: Record<string, unknown>[] }[];
+    const items = runs.flatMap((r) => r.items);
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) expect(item).not.toHaveProperty('email');
   });
 
   it('unknown api path is 404', async () => {
@@ -203,10 +208,13 @@ describe('public routes', () => {
   });
 
   it('unexpected errors are a Romanian 500', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const deps = testDeps({ db: {} as D1Database });
     const res = await call(deps, '/api/log');
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: 'Ceva n-a mers. Încearcă din nou.' });
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 

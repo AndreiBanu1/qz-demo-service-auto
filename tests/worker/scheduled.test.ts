@@ -1,7 +1,8 @@
 import { createExecutionContext, createScheduledController, waitOnExecutionContext } from 'cloudflare:test';
+import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { listRuns } from '../../worker/db';
-import { handleScheduled } from '../../worker/index';
+import worker, { handleScheduled } from '../../worker/index';
 import { cleanup } from '../../worker/jobs';
 import { testDeps } from './helpers';
 
@@ -14,6 +15,14 @@ async function fire(cron: string, deps = testDeps()) {
 }
 
 describe('scheduled', () => {
+  it('the real scheduled export wires the cron to the reminders job', async () => {
+    const ctx = createExecutionContext();
+    await worker.scheduled(createScheduledController({ cron: '0 5 * * *', scheduledTime: Date.now() }), env as never, ctx);
+    await waitOnExecutionContext(ctx);
+    const runs = await listRuns(env.DB, 50);
+    expect(runs.some((r) => r.job === 'remindere-zilnice' && r.trigger === 'cron')).toBe(true);
+  });
+
   it('0 5 cron runs reminders', async () => {
     const deps = testDeps();
     await cleanup(deps, 'buton', 'reset');

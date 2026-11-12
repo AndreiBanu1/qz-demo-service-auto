@@ -23,7 +23,12 @@ export default defineConfig({
         plugins: [
           cloudflareTest(async () => ({
             wrangler: { configPath: './wrangler.toml' },
-            miniflare: { bindings: { TEST_MIGRATIONS: await readD1Migrations(migrationsDir) } },
+            miniflare: { bindings: {
+                TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
+                // Test-only values so createDeps(env) works in the Worker entry tests.
+                ADMIN_PASSWORD: 'test-admin',
+                SESSION_SECRET: 'test-secret',
+              }, },
           })),
         ],
         test: {
