@@ -1,0 +1,4 @@
+ADMIN_PASSWORD=change-me
+SESSION_SECRET=change-me-to-a-long-random-string
+MAILTRAP_API_TOKEN=your-mailtrap-sandbox-token
+MAILTRAP_INBOX_ID=your-mailtrap-inbox-id
