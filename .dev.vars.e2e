@@ -1,0 +1,5 @@
+# Test-only values for the Playwright run. Not secrets.
+MAIL_MODE=memory
+ADMIN_PASSWORD=e2e-admin
+SESSION_SECRET=e2e-secret-not-a-real-secret
+SITE_URL=http://127.0.0.1:8787
