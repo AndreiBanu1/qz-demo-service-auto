@@ -34,6 +34,42 @@ describe('Mailtrap sandbox', () => {
     await expect(sender.send(email)).rejects.toThrow('500');
   });
 
+  it('waits and retries once when Mailtrap answers 429', async () => {
+    const statuses = [429, 200];
+    let calls = 0;
+    const fetchFn = (async () => {
+      const status = statuses[calls++];
+      return new Response('', { status, headers: status === 429 ? { 'Retry-After': '3' } : {} });
+    }) as unknown as typeof fetch;
+    const waits: number[] = [];
+    const sleepFn = async (ms: number) => {
+      waits.push(ms);
+    };
+    const sender = createMailtrapSandbox({ token: 'tok', inboxId: '123', fetchFn, sleepFn });
+
+    await sender.send(email);
+
+    expect(calls).toBe(2);
+    expect(waits).toEqual([3000]);
+  });
+
+  it('waits about 10 seconds without Retry-After, and gives up after a second 429', async () => {
+    let calls = 0;
+    const fetchFn = (async () => {
+      calls++;
+      return new Response('', { status: 429 });
+    }) as unknown as typeof fetch;
+    const waits: number[] = [];
+    const sleepFn = async (ms: number) => {
+      waits.push(ms);
+    };
+    const sender = createMailtrapSandbox({ token: 'tok', inboxId: '123', fetchFn, sleepFn });
+
+    await expect(sender.send(email)).rejects.toThrow('Mailtrap a răspuns cu codul 429.');
+    expect(calls).toBe(2);
+    expect(waits).toEqual([10_500]);
+  });
+
   it('turns a timeout into a short Romanian message', async () => {
     const fetchFn = (async () => {
       throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');

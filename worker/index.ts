@@ -4,11 +4,13 @@ import { route } from './router';
 import { handleScheduled } from './scheduled';
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const { pathname } = new URL(req.url);
     if (pathname !== '/api' && !pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     try {
-      return withHeaders(await route(req, createDeps(env)));
+      // Booking and car-ready emails finish after the response (see Deps.background).
+      const deps: Deps = { ...createDeps(env), background: (job) => ctx.waitUntil(job) };
+      return withHeaders(await route(req, deps));
     } catch (e) {
       // Missing secrets or settings: log the cause, keep it out of the response.
       console.error('worker setup error', e);

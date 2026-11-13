@@ -45,7 +45,8 @@ const NOW_ISO = '2026-11-10T06:00:00.000Z';
 describe('bookings and status', () => {
   it('booking sends confirmation and service notification', async () => {
     const deps = testDeps();
-    const { appointment, run } = await createBooking(deps, booking());
+    const { appointment, run: maybeRun } = await createBooking(deps, booking());
+    const run = maybeRun!;
 
     expect(run.job).toBe('confirmare-programare');
     expect(run.trigger).toBe('formular');
@@ -58,6 +59,27 @@ describe('bookings and status', () => {
     expect(deps.email.sent[1].to).toBe(SERVICE_EMAIL);
     expect(await listOutbox(deps.db, 50)).toHaveLength(2);
     expect(await listRuns(deps.db, 50)).toEqual([run]);
+  });
+
+  it('with a background runner, booking and car-ready emails are sent after the call returns', async () => {
+    const pending: Promise<unknown>[] = [];
+    const deps = testDeps({ background: (p) => pending.push(p) });
+
+    const { appointment, run } = await createBooking(deps, booking());
+    expect(run).toBeUndefined();
+    expect(await getAppointment(deps.db, appointment.id)).not.toBeNull();
+    expect(pending).toHaveLength(1);
+
+    await Promise.all(pending);
+    expect(deps.email.sent.map((e) => e.to)).toEqual(['ion@turbo-garaj.test', SERVICE_EMAIL]);
+    expect((await listRuns(deps.db, 50)).map((r) => r.job)).toEqual(['confirmare-programare']);
+
+    const ready = await setStatus(deps, appointment.id, 'gata');
+    expect(ready?.appointment.status).toBe('gata');
+    expect(ready?.run).toBeUndefined();
+    expect(pending).toHaveLength(2);
+    await Promise.all(pending);
+    expect(deps.email.sent).toHaveLength(3);
   });
 
   it('booking stores normalized email', async () => {
@@ -187,8 +209,8 @@ describe('budget', () => {
     const deps = testDeps();
     await env.DB.prepare("INSERT INTO email_budget (month, used) VALUES ('2026-11', 40)").run();
     const { run } = await createBooking(deps, booking());
-    expect(run.items.map((i) => i.outcome)).toEqual(['netrimis-limita', 'netrimis-limita']);
-    expect(run.result).toBe('ok');
+    expect(run?.items.map((i) => i.outcome)).toEqual(['netrimis-limita', 'netrimis-limita']);
+    expect(run?.result).toBe('ok');
     expect(deps.email.sent.length).toBe(0);
     expect(await listOutbox(deps.db, 50)).toHaveLength(2);
     expect(await emailsUsed(deps.db, '2026-11')).toBe(40);

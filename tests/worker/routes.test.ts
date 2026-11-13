@@ -1,3 +1,4 @@
+import { createExecutionContext } from 'cloudflare:test';
 import { describe, expect, it, vi } from 'vitest';
 import { appointmentFixture, testDeps, type TestDeps } from './helpers';
 import { insertAppointment, insertRun } from '../../worker/db';
@@ -222,7 +223,7 @@ describe('headers', () => {
   it('api responses carry X-Robots-Tag', async () => {
     const { default: worker } = await import('../../worker/index');
     const { env } = await import('cloudflare:workers');
-    const res = await worker.fetch(new Request(`${BASE}/api/session`), env as never);
+    const res = await worker.fetch(new Request(`${BASE}/api/session`), env as never, createExecutionContext());
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('referrer-policy')).toBeTruthy();

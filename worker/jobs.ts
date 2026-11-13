@@ -44,11 +44,21 @@ export function statusUrl(deps: Deps, token: string): string {
   return `${deps.siteUrl}/status/${token}`;
 }
 
+/**
+ * Runs a messaging job inline (returning its Run), or hands it to deps.background and
+ * returns undefined. runJob records its own failures; anything left is logged, never thrown.
+ */
+async function inlineOrBackground(deps: Deps, job: () => Promise<Run>): Promise<Run | undefined> {
+  if (!deps.background) return job();
+  deps.background(job().catch((e) => console.error('background job failed', e)));
+  return undefined;
+}
+
 /** Saves a booking (and its car, when there is anything to remind about), then confirms it. */
 export async function createBooking(
   deps: Deps,
   input: BookingInput,
-): Promise<{ appointment: Appointment; run: Run }> {
+): Promise<{ appointment: Appointment; run?: Run }> {
   const email = normalizeEmail(input.email);
   // Routes validate first; this keeps a non-test address out of the database regardless.
   if (!isTestAddress(email)) throw new Error('createBooking: not a test address');
@@ -85,11 +95,13 @@ export async function createBooking(
     });
   }
 
-  const run = await runJob(deps, 'confirmare-programare', 'formular', async (ctx) => {
-    await ctx.sendEmail(email, bookingConfirmation(appointment, statusUrl(deps, appointment.token)), appointment.id);
-    await ctx.sendEmail(SERVICE_EMAIL, serviceNotification(appointment), appointment.id);
-  });
-  return { appointment, run };
+  const run = await inlineOrBackground(deps, () =>
+    runJob(deps, 'confirmare-programare', 'formular', async (ctx) => {
+      await ctx.sendEmail(email, bookingConfirmation(appointment, statusUrl(deps, appointment.token)), appointment.id);
+      await ctx.sendEmail(SERVICE_EMAIL, serviceNotification(appointment), appointment.id);
+    }),
+  );
+  return run ? { appointment, run } : { appointment };
 }
 
 /** Null for an unknown id. Moving to „gata” sends the car-ready email and SMS preview. */
@@ -108,11 +120,13 @@ export async function setStatus(
   if (status !== 'gata' || current.status === 'gata') return { appointment };
 
   const url = statusUrl(deps, appointment.token);
-  const run = await runJob(deps, 'masina-gata', 'schimbare-status', async (ctx) => {
-    await ctx.sendEmail(appointment.email, carReady(appointment, url), appointment.id);
-    await ctx.sendSmsPreview(appointment.email, carReadySms(appointment, url), appointment.id);
-  });
-  return { appointment, run };
+  const run = await inlineOrBackground(deps, () =>
+    runJob(deps, 'masina-gata', 'schimbare-status', async (ctx) => {
+      await ctx.sendEmail(appointment.email, carReady(appointment, url), appointment.id);
+      await ctx.sendSmsPreview(appointment.email, carReadySms(appointment, url), appointment.id);
+    }),
+  );
+  return run ? { appointment, run } : { appointment };
 }
 
 /** The daily reminders job, shared by the cron and „Rulează acum”. */

@@ -20,6 +20,12 @@ export type Deps = {
   newToken: () => string;
   adminPassword: string;
   sessionSecret: string;
+  /**
+   * When set (the Worker passes ctx.waitUntil), the booking and car-ready jobs run after the
+   * response is sent, so a rate-limited email retry doesn't keep the form waiting.
+   * Unset (tests, scripts): those jobs run inline and their Run is returned.
+   */
+  background?: (job: Promise<unknown>) => void;
 };
 
 function toBase64Url(bytes: Uint8Array): string {
