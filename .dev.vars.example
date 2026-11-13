@@ -1,0 +1,6 @@
+MAIL_MODE=memory
+SITE_URL=http://127.0.0.1:8787
+ADMIN_PASSWORD=change-me
+SESSION_SECRET=change-me-to-a-long-random-string
+MAILTRAP_API_TOKEN=your-mailtrap-sandbox-token
+MAILTRAP_INBOX_ID=your-mailtrap-inbox-id

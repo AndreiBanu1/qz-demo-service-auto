@@ -102,8 +102,8 @@ database_name = "turbo-garaj-demo"
 database_id = "local-placeholder"   # replaced with the real id at Task 12
 migrations_dir = "migrations"
 [vars]
-MAIL_MODE = "memory"
-SITE_URL = "http://127.0.0.1:8787"
+MAIL_MODE = "sandbox"
+SITE_URL = ""   # set at deploy; local values come from .dev.vars
 ```
 
 ```
@@ -641,7 +641,7 @@ Any admin route without a valid cookie returns 401 „Intră în cont ca adminis
   1. `wrangler d1 create turbo-garaj-demo` and put the id in `wrangler.toml`.
   2. `wrangler d1 migrations apply turbo-garaj-demo --remote`.
   3. Set the four secrets with `wrangler secret put` (a strong `ADMIN_PASSWORD`, a random `SESSION_SECRET` of 32+ bytes, and the Mailtrap token and inbox id). The user types the secret values, never the agent.
-  4. Set `[vars]` `MAIL_MODE = "sandbox"` and `SITE_URL = "https://turbo-garaj-demo.<subdomain>.workers.dev"`.
+  4. Set `SITE_URL = "https://turbo-garaj-demo.<subdomain>.workers.dev"` in `wrangler.toml` once the subdomain is confirmed; `MAIL_MODE` is already `sandbox`.
   5. `npm run build && wrangler deploy`.
 - [ ] **Step 5: Smoke test on the live site.**
   - `curl -sI https://turbo-garaj-demo.<subdomain>.workers.dev/ | grep -i x-robots-tag` prints `noindex, nofollow`.

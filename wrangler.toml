@@ -1,0 +1,23 @@
+name = "turbo-garaj-demo"
+main = "worker/index.ts"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "turbo-garaj-demo"
+database_id = "local-placeholder"   # replaced with the real id at Task 12
+migrations_dir = "migrations"
+
+[vars]
+# Production values. Local values live in .dev.vars (see .dev.vars.example) and override these.
+# SITE_URL is set at deploy to https://turbo-garaj-demo.<subdomain>.workers.dev
+MAIL_MODE = "sandbox"
+SITE_URL = ""
+
+[triggers]
+crons = ["0 5 * * *", "0 2 * * *"]
