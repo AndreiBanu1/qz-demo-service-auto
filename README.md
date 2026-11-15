@@ -79,17 +79,16 @@ Retention: admin-created bookings and cars are deleted after 7 days, log entries
 5. Press "Rulează acum" and watch the log entry appear.
 6. Press "Șterge clientul" to show the data is gone.
 
-## Deploying (not done yet)
+## Deployment
 
-Nothing has been deployed. The user does the account steps and types the secret values; an agent never does.
+Live at https://turbo-garaj-demo.andreibanu97.workers.dev, on Cloudflare's free plan (the account is shared with the other Quality Zone demos). Email goes to a Mailtrap sandbox inbox. It was deployed like this:
 
-- [ ] Check the ONRC registry for "Turbo Garaj"; rename if a firm uses it.
-- [ ] Create a free Mailtrap account and sandbox; note the API token and inbox id.
-- [ ] Confirm the Cloudflare account (shared with Bucla Verde) and its `workers.dev` subdomain, and that the free Cron Trigger limit covers 2 + 1 crons. Explicit yes before anything below.
-- [ ] `npx wrangler d1 create turbo-garaj-demo`; put the id in `wrangler.toml`.
-- [ ] `npx wrangler d1 migrations apply turbo-garaj-demo --remote`.
-- [ ] `npx wrangler secret put` for the four secrets above (strong `ADMIN_PASSWORD`, random `SESSION_SECRET` of 32+ bytes).
-- [ ] In `wrangler.toml` `[vars]`, set `SITE_URL = "https://turbo-garaj-demo.<subdomain>.workers.dev"` once the subdomain is confirmed (`MAIL_MODE` is already `sandbox`).
-- [ ] `npm run build && npx wrangler deploy`.
-- [ ] Smoke test: `curl -sI https://turbo-garaj-demo.<subdomain>.workers.dev/ | grep -i x-robots-tag` prints `noindex, nofollow`; in `/admin` press "Resetează demo", make a booking, see the email in Mailtrap and both runs in `/automatizari`.
-- [ ] Next morning: `/automatizari` shows a `curatenie` run after 02:00 UTC and a `remindere-zilnice` run ("pornit automat") after 05:00 UTC, with one email sent.
+1. Created the D1 database (`npx wrangler d1 create turbo-garaj-demo`) and put its id in `wrangler.toml`.
+2. Applied the migrations: `npx wrangler d1 migrations apply turbo-garaj-demo --remote`.
+3. Set the four secrets with `npx wrangler secret put`: a strong `ADMIN_PASSWORD`, a random `SESSION_SECRET` of 32+ bytes, and the Mailtrap sandbox token and inbox id.
+4. Set `SITE_URL` in `wrangler.toml` `[vars]` to the public address (`MAIL_MODE` is `sandbox`).
+5. Ran `npm run build && npx wrangler deploy`.
+6. Smoke-tested it: every response carries `X-Robots-Tag: noindex, nofollow`, and a booking sends its two emails to the sandbox and appears in `/automatizari`.
+7. Checked the first automatic runs the next morning: `curatenie` after 02:00 UTC and `remindere-zilnice` ("pornit automat") after 05:00 UTC, both "ok".
+
+Still open: a check of the ONRC company register for the name „Turbo Garaj”, to rename the demo if a real firm uses it.
